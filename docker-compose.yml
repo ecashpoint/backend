@@ -1,0 +1,249 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:15-alpine3.21
+    container_name: postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Keycloak
+  # ============================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak123
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+    ports:
+      - "9090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ============================================
+  # API Gateway (Quarkus)
+  # ============================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: api-gateway
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_OIDC_AUTH_SERVER_URL: http://keycloak:8080/realms/mi-app
+      QUARKUS_OIDC_CLIENT_ID: api-gateway
+      QUARKUS_OIDC_CREDENTIALS_SECRET: gateway-secret-123
+      QUARKUS_REST_CLIENT_PUNTOS_URL: http://puntos:8081
+      QUARKUS_REST_CLIENT_MARKETING_URL: http://marketing:8082
+      QUARKUS_HTTP_CORS: true
+      QUARKUS_HTTP_CORS_ORIGINS: http://localhost:4200,http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/q/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # Microservicio 1 - Productos
+  # ============================================
+  puntos:
+    build:
+      context: ./puntos
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: puntos
+    environment:
+      QUARKUS_HTTP_PORT: 8081
+      QUARKUS_OIDC_AUTH_SERVER_URL: http://keycloak:8080/realms/mi-app
+      QUARKUS_OIDC_CLIENT_ID: backend-puntos
+      QUARKUS_OIDC_CREDENTIALS_SECRET: puntos-secret-123
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      QUARKUS_DATASOURCE_USERNAME: postgres
+      QUARKUS_DATASOURCE_PASSWORD: postgres123
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres-puntos:5432/puntosdb
+      QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      postgres-puntos:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/q/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres-puntos:
+    image: postgres:15-alpine
+    container_name: postgres-puntos
+    environment:
+      POSTGRES_DB: puntosdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    volumes:
+      - postgres_puntos_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Microservicio 2 - Pedidos
+  # ============================================
+  marketing:
+    build:
+      context: ./marketing
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: marketing
+    environment:
+      QUARKUS_HTTP_PORT: 8082
+      QUARKUS_OIDC_AUTH_SERVER_URL: http://keycloak:8080/realms/mi-app
+      QUARKUS_OIDC_CLIENT_ID: backend-marketing
+      QUARKUS_OIDC_CREDENTIALS_SECRET: marketing-secret-123
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      QUARKUS_DATASOURCE_USERNAME: postgres
+      QUARKUS_DATASOURCE_PASSWORD: postgres123
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres-marketing:5432/marketingdb
+      QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
+      # Para comunicación con puntos
+      QUARKUS_REST_CLIENT_puntos_URL: http://puntos:8081
+      QUARKUS_OIDC_CLIENT_AUTH_SERVER_URL: http://keycloak:8080/realms/mi-app
+      QUARKUS_OIDC_CLIENT_CLIENT_ID: backend-service-2
+      QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET: marketing-secret-123
+      QUARKUS_OIDC_CLIENT_GRANT_TYPE: client
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      postgres-marketing:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/q/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres-marketing:
+    image: postgres:15-alpine
+    container_name: postgres-marketing
+    environment:
+      POSTGRES_DB: marketingdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    volumes:
+      - postgres_marketing_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Frontend Angular (Opcional)
+  # ============================================
+  #angular-app:
+   # build:
+    #  context: ./angular-app
+     # dockerfile: Dockerfile
+    #container_name: angular-app
+    #ports:
+     # - "4200:80"
+    #depends_on:
+    #  - api-gateway
+    #networks:
+    #  - app-network
+
+  # ============================================
+  # Monitoring - Prometheus (Opcional)
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9091:9090"
+    networks:
+      - app-network
+
+  # ============================================
+  # Monitoring - Grafana (Opcional)
+  # ============================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  postgres_puntos_data:
+  postgres_marketing_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,63 @@
+
+# Maven
+**/target/
+**/pom.xml.tag
+**/pom.xml.releaseBackup
+**/pom.xml.versionsBackup
+**/pom.xml.next
+**/.mvn/wrapper/maven-wrapper.jar
+
+# Quarkus
+**/.quarkus/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+*.env.local
+*.env.production
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+docker-compose.override.yml
+
+# Node (Angular)
+angular-app/node_modules/
+angular-app/dist/
+angular-app/.angular/
+
+# Android
+android-app/.gradle/
+android-app/build/
+android-app/local.properties
+android-app/*.apk
+
+# iOS
+ios-app/Pods/
+ios-app/*.xcworkspace
+ios-app/Podfile.lock
+
+# Secrets
+**/*secret*
+**/*key*.pem
+**/*cert*.pem
+**/keystore.*
+
+# Compiled
+*.class
+*.jar
+*.war
