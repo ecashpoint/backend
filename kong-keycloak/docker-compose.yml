@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # KONG GATEWAY & DATABASE
+  # ============================================
+  
+  # Base de datos para Kong
+  kong-database:
+    image: postgres:15
+    container_name: kong-db
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kong
+    volumes:
+      - kong-db:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Migración inicial de Kong
+  kong-migration:
+    image: kong:3.4
+    container_name: kong-migration
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+    networks:
+      - microservices-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+
+  # Kong Gateway
+  kong:
+    image: kong:3.4
+    container_name: kong-gateway
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+    ports:
+      - "8000:8000"  # Proxy HTTP (clientes se conectan aquí)
+      - "8443:8443"  # Proxy HTTPS
+      - "8001:8001"  # Admin API
+      - "8002:8002"  # Admin GUI
+    networks:
+      - microservices-net
+    depends_on:
+      kong-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  # ============================================
+  # KONGA - Admin UI para Kong (CORREGIDO)
+  # ============================================
+  
+  # Base de datos separada para Konga
+  konga-database:
+    image: postgres:11-alpine
+    container_name: konga-db
+    environment:
+      POSTGRES_DB: konga
+      POSTGRES_USER: konga
+      POSTGRES_PASSWORD: kongapass
+    volumes:
+      - konga-db:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "konga"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Preparación de base de datos de Konga
+  konga-prepare:
+    image: pantsel/konga:latest
+    container_name: konga-prepare
+    command: "-c prepare -a postgres -u postgresql://konga:kongapass@konga-database:5432/konga"
+    networks:
+      - microservices-net
+    depends_on:
+      konga-database:
+        condition: service_healthy
+    restart: on-failure
+
+  # Konga UI
+  konga:
+    image: pantsel/konga:latest
+    container_name: konga-admin
+    environment:
+      NODE_ENV: production
+      DB_ADAPTER: postgres
+      DB_HOST: konga-database
+      DB_PORT: 5432
+      DB_USER: konga
+      DB_PASSWORD: kongapass
+      DB_DATABASE: konga
+      TOKEN_SECRET: algunos-secretos-aleatorios-aqui-2024
+      NO_AUTH: "false"
+    ports:
+      - "1337:1337"
+    networks:
+      - microservices-net
+    depends_on:
+      konga-prepare:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ============================================
+  # KEYCLOAK & DATABASE
+  # ============================================
+
+  postgres-keycloak:
+    image: postgres:15
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - keycloak-db:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+    ports:
+      - "8180:8080"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres-keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  kong-db:
+  konga-db:  # ← Este volumen es NUEVO y NECESARIO
+  keycloak-db:
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  microservices-net:
+    driver: bridge

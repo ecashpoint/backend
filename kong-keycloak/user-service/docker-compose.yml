@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres-users:
+    image: postgres:15
+    container_name: postgres-users
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - users-db:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  users-db:
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  microservices-net:
+    driver: bridge
