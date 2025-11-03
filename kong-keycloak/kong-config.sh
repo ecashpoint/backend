@@ -17,7 +17,7 @@ curl -i -X POST ${KONG_ADMIN_URL}/services \
   --data url=http://user-service:8081
 
 curl -i -X POST ${KONG_ADMIN_URL}/services/user-service/routes \
-  --data 'paths[]=/api/users' \
+  --data 'paths[]=/api/users_data' \
   --data 'name=user-route' \
   --data 'strip_path=false'
 
