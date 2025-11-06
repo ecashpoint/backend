@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables de configuración
-KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-your-keycloak-secret-here}"
+KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-DpFiK95G8T8G1avCgWrSHRTGWLm13sAQ}"
 CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}"
 
 echo "🚀 Desplegando Microservicios Quarkus..."
