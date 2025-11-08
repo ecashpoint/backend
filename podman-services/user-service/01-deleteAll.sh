@@ -16,7 +16,7 @@ echo "🔨 Reconstruyendo imagen User Service..."
 podman rmi user-service:latest 2>/dev/null || true
 podman build -t user-service:latest \
   --no-cache \
-  -f user-service/src/main/docker/Dockerfile.native \
+  -f src/main/docker/Dockerfile.native \
   .
 
 # 3. Reiniciar base de datos
