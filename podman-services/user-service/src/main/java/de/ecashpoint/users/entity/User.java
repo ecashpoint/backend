@@ -20,6 +20,9 @@ public class User extends PanacheEntity {
     @Column(unique = true, nullable = false , length = 50)
     public String code;
 
+    @Column(unique = false, nullable = false , length = 50 , name = "auth_id")
+    public Integer authId;
+
     @Column(unique = false, nullable = false , length = 50)
     public String father;
 
@@ -43,6 +46,15 @@ public class User extends PanacheEntity {
 
     @Column( nullable = true , length = 10 )
     public String dv;
+
+    @Column( nullable = false , length = 45)
+    public Integer points = 0;
+
+    @Column( nullable = false , length = 45)
+    public Double cash = 0.0;
+
+    @Column( nullable = true , length = 255 )
+    public String tokenRedeem;
 
     @Column(name = "created_at", nullable = false)
     @JsonProperty("createdAt")
