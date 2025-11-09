@@ -20,8 +20,8 @@ public class User extends PanacheEntity {
     @Column(unique = true, nullable = false , length = 50)
     public String code;
 
-    @Column(unique = false, nullable = true , length = 50 , name = "auth_id")
-    public Integer authId = 0;
+    @Column(unique = true, nullable = true , length = 50 , name = "auth_id")
+    public String authId ;
 
     @Column(unique = false, nullable = false , length = 50)
     public String father;

@@ -110,7 +110,31 @@ final class KeycloakService
 
             return $userId;
         }catch(ClientException $e){
-            throw new \Exception('Error creating Keycloak user: ' . $e->getMessage());
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorBody = json_decode($e->getResponse()->getBody()->getContents(), true);
+
+            // 409 Conflict - Usuario ya existe
+            if ($statusCode === 409) {
+                /*return [
+                    'success' => false,
+                    'error' => 'USER_EXISTS',
+                    'message' => 'El usuario ya existe en echaspoint',
+                    'details' => $errorBody['errorMessage'] ?? 'User already exists'
+                ];*/
+                throw new \Exception('User already exists in ecashpoint' , 409);
+            }
+
+            // 400 Bad Request - Datos inválidos
+            if ($statusCode === 400) {
+                /*return [
+                    'success' => false,
+                    'error' => 'INVALID_DATA',
+                    'message' => 'Datos de usuario inválidos',
+                    'details' => $errorBody['errorMessage'] ?? 'Invalid user data'
+                ];*/
+                throw new \Exception('Invalid user data provided' , 400);
+            }
+            throw new \Exception('Error creating Keycloak user: ' . ($errorBody['errorMessage'] ?? $e->getMessage()));
         }
     }
 

@@ -30,7 +30,7 @@ final class KongGatewayService
 
     
 
-    public function createUserKong(object $user, string $id_user , string $accessToken)
+    public function createUserKong( $user,  $id_user ,  $accessToken)
     {
         try{
             $response = $this->client->post('/api/users_data', [
@@ -53,7 +53,7 @@ final class KongGatewayService
             $data = json_decode($response->getBody()->getContents(), true);
             return $data;
         }catch(ClientException $e){
-            throw new \Exception('Error creating Kong user: ' . $e->getMessage());
+            throw new \Exception('Error creating Kong user: ' . $e->getMessage() .'-'.$id_user.'-'.$accessToken);
         }
     }
 
