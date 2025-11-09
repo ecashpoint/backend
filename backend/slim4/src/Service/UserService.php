@@ -19,6 +19,16 @@ final class UserService
         $this->kongGatewayService = new KongGatewayService();
     }
 
+    public function login(array $data){
+        $user = json_decode((string) json_encode($data), false);
+
+        $access_token = $this->keycloakService->getTokenGateway($user->username , $user->password);
+        if(!$access_token){
+            throw new \Exception('Error getting token for user in Keycloak');
+        }
+        return $access_token;
+    }
+
     public function authenticateUser(array $data)
     {
         $user = json_decode((string) json_encode($data), false);

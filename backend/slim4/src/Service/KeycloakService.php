@@ -54,7 +54,7 @@ final class KeycloakService
             return $data;
         } catch (ClientException $e){
 
-            throw new \Exception('Error creating Kong user: ' . $e->getMessage());
+            throw new \Exception('Error generate token access: ' . $e->getMessage());
         }
     }
 
