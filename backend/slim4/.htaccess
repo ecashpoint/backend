@@ -1,0 +1,4 @@
+<FilesMatch "^\.env|^\.git|^composer\.(json|lock)|^package(-lock)?\.json">
+       Order allow,deny
+       Deny from all
+</FilesMatch>
