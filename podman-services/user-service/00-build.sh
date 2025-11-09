@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables de configuración
-KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-DpFiK95G8T8G1avCgWrSHRTGWLm13sAQ}"
+KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-oKjNJadNuvL1iSRoL5LFe3sYpD6Kvlgf}"
 CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}"
 
 echo "🔄 Reconstruyendo User Service..."

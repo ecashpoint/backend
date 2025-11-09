@@ -29,8 +29,16 @@ final class UserService
 
         $id_user =  $this->keycloakService->assignate_role_user($user->username, $authorization['access_token'] , $user->rol);
         //create user a kong
-        $user_create = $this->kongGatewayService->createUserKong($user, $id_user);
-        
+        if(!$id_user){
+            throw new \Exception('Error assigning role to user in Keycloak');
+        }
+        //obtener token con nuevas credenciales
+        $access_token = $this->keycloakService->getTokenGateway($user->username , $user->password);
+        if(!$access_token){
+            throw new \Exception('Error getting token for new user in Keycloak');
+        }
+        $user_create = $this->kongGatewayService->createUserKong($user, $id_user , $access_token['access_token']);
+    
         return $user_create;
     }
 }

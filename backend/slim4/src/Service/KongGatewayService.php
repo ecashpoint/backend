@@ -24,14 +24,16 @@ final class KongGatewayService
     {
         $this->client = new Client([
             'base_uri' => $this->getGatewayUrl(),
-            'timeout'  => 5.0,
+            'timeout'  => 10.0,
         ]);
     }
+
+    
 
     public function createUserKong(object $user, string $id_user , string $accessToken)
     {
         try{
-            $response = $this->client->post('/users_data', [
+            $response = $this->client->post('/api/users_data', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json'

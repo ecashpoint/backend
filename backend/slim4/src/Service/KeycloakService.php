@@ -20,7 +20,9 @@ final class KeycloakService
             'keycloak_pass' => $_SERVER['KEYCLOAK_PASSWORD'],
             'endpoint_token' => $_SERVER['ENDPOINT_TOKEN'],
             'endpoint_create_user' => $_SERVER['ENDPOINT_CREATE_USER'],
-            'client_id_admin' => $_SERVER['CLIENT_ID_ADMIN']
+            'client_id_admin' => $_SERVER['CLIENT_ID_ADMIN'],            
+            'kong_client' => $_SERVER['KONG_CLIENT'],
+            'client_secret' => $_SERVER['CLIENT_SECRET']
         );
         $this->init();
     }
@@ -31,6 +33,37 @@ final class KeycloakService
             'base_uri' => $this->getKeycloakUrl(),
             'timeout'  => 5.0,
         ]);
+    }
+
+    public function getTokenGateway($user , $password){
+        try {
+            //code...
+            $response = $this->client->post('/realms/microservices/protocol/openid-connect/token',[
+                "headers" => [
+                    'Content-Type' => 'application/x-www-form-urlencoded'
+                ],
+                "form_params" => [
+                    'grant_type' => 'password',
+                    'client_id' => $this->getClientId(),
+                    'client_secret' => $this->getClientSecret(),
+                    'username' => $user,
+                    'password' => $password
+                ]
+                ]);
+            $data = json_decode($response->getBody()->getContents(), true);
+            return $data;
+        } catch (ClientException $e){
+
+            throw new \Exception('Error creating Kong user: ' . $e->getMessage());
+        }
+    }
+
+    public function getClientSecret(){
+        return $this->tokens['client_secret'];
+    }
+
+    public function getClientId(){
+        return $this->tokens['kong_client'];
     }
 
     public function getToken()
@@ -57,7 +90,7 @@ final class KeycloakService
         ];
     }
 
-    public function create_user(array $data, string $accessToken)
+    public function create_user(object $data, string $accessToken)
     {
         try{
             $response = $this->client->post($this->tokens['endpoint_create_user'], [
@@ -67,13 +100,21 @@ final class KeycloakService
                 ],
                 'json' => $this->get_body_create_user((object)$data)
             ]);
-            return json_decode($response->getBody()->getContents(), true);
+           // El ID del usuario viene en el header Location
+            $location = $response->getHeader('Location')[0] ?? '';
+            $userId = basename($location);
+
+            if (empty($userId)) {
+                throw new \Exception('Could not retrieve user ID from response');
+            }
+
+            return $userId;
         }catch(ClientException $e){
             throw new \Exception('Error creating Keycloak user: ' . $e->getMessage());
         }
     }
 
-    public function assignate_role_user($username , $accessToken , $rol)
+    public function assignate_role_user($username , $accessToken , $roleName)
     {
         //to do
         try {
@@ -87,30 +128,34 @@ final class KeycloakService
             $data = json_decode($response->getBody()->getContents(), true);
             $userId = $data[0]['id'];
             //get role id
-            $responseRole = $this->client->get('/admin/realms/microservices/roles/client', [
+            $responseRole = $this->client->get('/admin/realms/microservices/roles', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json'
                         ]]);
-            $dataRole = json_decode($responseRole->getBody()->getContents(), true); 
+            $roles = json_decode($responseRole->getBody()->getContents(), true); 
             //buscar por nombre del rol in $dataRole
-            $resultado = array_filter($dataRole, function($role) use ($rol) {
-                return $role['name'] === $rol;
+            $filteredRoles = array_filter($roles, function ($role) use ($roleName) {
+                return $role['name'] === $roleName;
             });
-            $rol= reset($resultado);
-            //assign role to user
+            if (empty($filteredRoles)) {
+                throw new \Exception("Role '{$roleName}' not found in Keycloak");
+            }
+
+            $role = reset($filteredRoles);
+
             $this->client->post('/admin/realms/microservices/users/' . $userId . '/role-mappings/realm', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json',
-                'json' => [
+                ],
+                'json' => [  // Debe estar aquí, fuera de headers
                     [
-                        'id' => $roleId,
-                        'name' => $rol['name']
-                    ]
+                        'id' => $role['id'],
+                        'name' => $role['name']
                     ]
                 ]
-        ]);
+            ]);
 
         return $userId;
 
@@ -131,8 +176,8 @@ final class KeycloakService
                         'temporary' => false
                     ]
                 ],
-                'firstName' => $data->firstName,
-                'lastName' => $data->lastName,
+                'firstName' => $data->firstName ?? '',
+                'lastName' => $data->lastName ?? '',
                 'email' => $data->email
         ];
     }
