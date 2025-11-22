@@ -8,5 +8,7 @@ public final class Constants {
     public static final String EXCEPTION_EXIST_DOCUMENT = "Die Identifikation existiert bereits:";
     public static final String EXCEPTION_EXIST_PHONE = "Das Telefon existiert bereits:";
 
+    public static final String EXCEPTION_EXIST_CATEGORY = "Das Kategorie existiert bereits:";
+
 
 }

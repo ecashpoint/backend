@@ -22,9 +22,32 @@ public class UserService {
         return userRepository.listAll();
     }
 
+    public User getUserByAuthId(String id) {
+        return userRepository.find("auth_id", id).firstResultOptional().orElseThrow(() -> 
+            new NotFoundException("Usuario no encontrado con ID de autenticación: " + id)
+        );
+    }
+
     public User findById(Long id) {
         return userRepository.findByIdOptional(id)
             .orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
+    }
+
+    public void updated(User user , String authId){
+        User existingUser = userRepository.find("auth_id", authId).firstResultOptional().orElseThrow(() -> 
+            new NotFoundException("Usuario no encontrado con ID de autenticación: " + authId)
+        );
+
+        existingUser.firstName = user.firstName;
+        existingUser.lastName = user.lastName;
+        existingUser.email = user.email;
+        existingUser.father = user.father;
+        existingUser.indicative = user.indicative;
+        existingUser.phone = user.phone;
+        existingUser.document = user.document;
+        existingUser.dv = user.dv;
+
+        userRepository.persist(existingUser);
     }
 
     @Transactional

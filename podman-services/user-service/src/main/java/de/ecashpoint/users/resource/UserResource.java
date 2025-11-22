@@ -12,6 +12,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
@@ -43,6 +44,40 @@ public class UserResource {
         return Response
                 .status(Response.Status.CREATED)
                 .entity(created)
+                .build();
+    }
+
+    @GET
+    @Path("/account-info")
+    @PermitAll
+    public Response getAccountInfo(){
+        String userId = jwt.getSubject();
+        User user = userService.getUserByAuthId(userId);
+
+        return Response
+                .ok(user)
+                .build();
+    }
+
+    @PUT
+    @RolesAllowed({"admin" , "client" , "super_admin" , "ecommerce"})
+    public Response update(User user){
+
+        userService.updated(user , jwt.getSubject());
+
+        return Response
+                .ok()
+                .build();
+    }
+
+    @PUT
+    @Path("/admin-update/{authId}")
+    @RolesAllowed({"admin" , "super_admin"})
+    public Response adminUpdate(User user , String authId){
+        userService.updated(user , authId);
+
+        return Response
+                .ok()
                 .build();
     }
     
