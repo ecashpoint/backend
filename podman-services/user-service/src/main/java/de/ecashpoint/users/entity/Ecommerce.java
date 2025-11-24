@@ -40,13 +40,13 @@ public class Ecommerce extends PanacheEntity{
     @Column(unique = false , nullable = false , length = 4 , name = "ecommerce_percentege")
     public Double ecommercePercentage;
 
-    @Column(unique = true , nullable = false , length = 15 , name = "ecommerce_phone")
+    @Column(unique = false , nullable = false , length = 15 , name = "ecommerce_phone")
     public String ecommercePhone;
 
     @Column(unique = false , nullable = false , length = 125 , name = "ecommerce_email")
     public String ecommerceEmail;
 
-    @Column(unique = true , nullable = false , length = 15 , name = "ecommerce_whatsapp")
+    @Column(unique = false , nullable = false , length = 15 , name = "ecommerce_whatsapp")
     public String ecommerceWhatsapp;
   
     @Column(unique = false , nullable = false , length = 10 , name = "ecommerce_status")
