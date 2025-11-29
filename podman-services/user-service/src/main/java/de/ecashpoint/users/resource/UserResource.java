@@ -37,7 +37,7 @@ public class UserResource {
     }
 
     @POST
-    //@PermitAll
+    @PermitAll
     public Response create(User user){
         User created = userService.create(user);
 

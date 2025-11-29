@@ -1,12 +1,16 @@
 package de.ecashpoint.users.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
  
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity; 
@@ -81,6 +85,8 @@ public class Ecommerce extends PanacheEntity{
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    
 
 
 }

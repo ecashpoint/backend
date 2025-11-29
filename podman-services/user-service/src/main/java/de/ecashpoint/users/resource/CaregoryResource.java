@@ -48,7 +48,7 @@ public class CaregoryResource {
 
     @POST
     @Transactional
-    //@RolesAllowed({"super_admin" , "admin"})
+    @RolesAllowed({"super_admin" , "admin"})
     @Operation(
         summary = "Create a new category",
         description = "Create a new category store in the system"
